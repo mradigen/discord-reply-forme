@@ -1,0 +1,105 @@
+#!/bin/sh 
+# shellcheck disable=SC2015,SC1090
+authF="${XDG_CACHE_HOME:-$HOME/.cache/}/shfire/authkey"
+authB="${XDG_CACHE_HOME:-$HOME/.cache/}/basefire/authkey" # basefire
+death() { echo -e -e -e -e -e -e $1; exit 1; }
+auth() {
+  [ -f "./authkey" ] && { . "./authkey"; } || {
+    [ -f "$authF" ] && { . "$authF"; } || {
+      [ -f "$authB" ] && { . "$authB"; }
+    }
+  }
+  [ "$AUTHKEY" ] || { death "AUTHKEY UNSET OR AUTHFILE MISSING... CANNOT CONTINUE.."; }
+}
+
+#
+# ~'s Are used as delimiters, from that reason whenever a delimiter is needed
+# regex will replace ~'s for -'s before using delimiters
+# This will have no effect on ID's and the client should continue to work fine
+# since * names are only displayed and never read
+#
+
+send() {
+  postemp=$(mktemp); cat > $postemp
+  IFS=""
+  [ "$1" ] || { death "Channel ID not given... FALLING BACK..." ; }
+  [ ! "$(wc -m < $postemp)" -gt "2000" ] || { death "MESSAGE LONGER THEN 2000 CHARS... FALLING BACK"; } # Handle made lenght
+  curl -sX "POST" -H "Authorization: $AUTHKEY" -H "User-Agent: $UA" -L "https://discord.com/api/v6/channels/$1/messages" -d content="$(cat $postemp)" >/dev/null
+  rm $postemp
+}
+readCH() {
+  [ "$1" ] || { death "Channel ID not given... FALLING BACK..." ; }
+  rtemp=$(mktemp)
+  code=$(curl -sX "GET" -H "Authorization: $AUTHKEY" -H "User-Agent: $UA" -L "https://discord.com/api/v6/channels/$1/messages" -w '%{http_code}' --output $rtemp)
+  while [ "$code" -gt 300 ]; do
+    sleep ".$(jq .retry_after $rtemp)"
+    code=$(curl -sX "GET" -H "Authorization: $AUTHKEY" -H "User-Agent: $UA" -L "https://discord.com/api/v6/channels/$1/messages" --output $rtemp -w '%{http_code}')
+  done
+  echo -e -e -e -e -e -e $(cat $rtemp | {
+    [ "$2" ] || { jq '.[] | ["\n"+.author.username+": ",.content]' -r; } &&  { jq '.[] | ["\n"+.author.id+"DIL ",.content]' -r; } 
+  } | sed -e 's/"//g' -e 's/,//' -e 's/\[//g' -e 's/\]//g' -e '/^$/d' -e 's/^[ \t]*//') | sed -e 's/^[ \t]*//'
+  # echo -e -e -e -e -e -e -e is needed when using bash
+  rm $rtemp
+}
+listG() {
+  #ui="$(echo -e -e -e -e -e -e -ne $'\355')"
+  curl -sX "GET" -H "Authorization: $AUTHKEY" -H "User-Agent: $UA" -L "https://discord.com/api/v6/users/@me/guilds" | jq '.[] | [.name,.id]' -r | sed -e 's/~/-/g' -e 's/"//g' -e 's/,/@/g' -e 's/\[//g' -e 's/\]//g' -e '/^$/d' -e 's/^[ \t]*//' | tr '\n' "~" | sed -e "s/@~/@/g" | tr '~' '\n'
+}
+listCH() {
+  [ $1 ] || { death "Guild ID not given... FALLING BACK..."; }
+  curl -sX "GET" -H "Authorization: $AUTHKEY" -H "User-Agent: $UA" -L "https://discord.com/api/v6/guilds/$1/channels" | jq '.[] | [ if .type == 0 then .name,.id else "GROUPoVC" end ]' | sed -e '/GROUPoVC/d' -e 's/~/-/g' -e 's/"//g' -e 's/,/@/g' -e 's/\[//g' -e 's/\]//g' -e '/^$/d' -e 's/^[ \t]*//' | tr '\n' "~" | sed -e "s/@~/@/g" | tr '~' '\n'
+  # != type 0 means a group or vc which are useless to shfire and only annoying
+}
+listDM() {
+  curl -sX "GET" -H "Authorization: $AUTHKEY" -H "User-Agent: $UA" -L "https://discord.com/api/v6/users/@me/channels" | jq '.[] | [ if .type != 3 then .recipients[].username,.id else "TYPE 3" end]' | sed -e 's/~/-/g' -e 's/"//g' -e 's/,/@/g' -e 's/\[//g' -e 's/\]//g' -e '/^$/d' -e 's/^[ \t]*//' -e '/TYPE 3/d' | tr '\n' "~" | sed -e "s/@~/@/g" | tr '~' '\n'
+  # TYPE 3 # Group DMs are not supported and will not be...
+  # this regex just discrads them, since it would take extra sed + tr to manage them
+}
+usage() {
+  cat << 'EOF'
+###
+SHfire:
+  Extremely basic Discord Client in POSIX sh
+    - Because, Because? I'm insane?
+Usage:
+  <command outputing text> | ./send <CHANNEL ID>
+    - Sends piped data to <CHANNEL ID>
+  ./read <CHANNEL ID>
+    - Outputs messages in CHANNEL
+      - Extremely basic...
+  ./list [DM|CH]
+    - Lists Guilds/Channels/DMs
+    CH:
+      - Requires <GUILD ID>
+###
+EOF
+}
+auth; [ $(echo -e -e -e -e -e -e $AUTHKEY | cut -d' ' -f1 ) = "Bot" ] && { export UA="DiscordBot (SHFIRE)"; } || { export UA="Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0"; }
+case $(basename $0) in
+  shfire)
+    usage; exit 1
+  ;;
+  send)
+    echo -e -e -e -e -e -e "Sending..."
+    send "$1";
+  ;;
+  read)
+    #echo -e -e -e -e -e -e "Reading..."
+    # Better to not have this for basefire...
+    readCH "$@"
+  ;;
+  list)
+    [ "$1" = "CH" ] && {
+      echo -e -e -e -e -e -e "Getting Channels.."
+      listCH "$2"
+      exit 0
+    }
+    [ "$1" = "DM" ] && {
+      echo -e -e -e -e -e -e "Getting DMs..."
+      listDM
+      exit 0
+    }
+    echo -e -e -e -e -e -e "Getting Guilds..." 
+    listG
+  ;;
+esac

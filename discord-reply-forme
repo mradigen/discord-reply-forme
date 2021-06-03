@@ -1,0 +1,29 @@
+#! /bin/sh
+
+# Options
+requestedUser=$1
+message=$2
+messagesDir="./messages"
+signatureFile="./signature"
+
+# Alias for shfire, rememeber to change it to where shfire is located for you
+alias send="./shfire/send"
+
+# Loop through entries in './users'
+while read userEntry; do
+	# Get the name of the user in the list
+	user=$(awk -F= '{print $1}' <<< $userEntry)
+
+	# Check whether this is the user we want to send the message to
+	if [[ $requestedUser == $user ]]
+	then
+		# If yes, then get their ID
+		userID=$(awk -F= '{print $2}' <<< $userEntry)
+
+		# Send the corresponding message:
+		cat $messagesDir/$message | send $userID
+
+		# Output the `./signature` and send it
+		cat $signatureFile | send $userID
+	fi
+done <users
