@@ -4,7 +4,7 @@ Discord-Reply-ForMe is a shell script that can send a preset message to a user b
 
 ## NOTE
 
-Using `shfire ` is against Discord's TOS. This script utilizes it. Use at your own risk.
+Using `shfire` is against Discord's TOS. This script utilizes it. Use at your own risk.
 
 ## Example
 
