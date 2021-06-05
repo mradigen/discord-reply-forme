@@ -3,6 +3,7 @@
 # Options
 requestedUser=$1
 message=$2
+usersFile="./users"
 messagesDir="./messages"
 signatureFile="./signature"
 
@@ -26,4 +27,4 @@ while read userEntry; do
 		# Output the `./signature` and send it
 		cat $signatureFile | send $userID
 	fi
-done <users
+done <$usersFile
