@@ -70,13 +70,13 @@ You need the copy the ID after `@me/`, in this case, `573922542252763931` is the
 
 Add an entry in the `users` file in such a format:
 
-```sh
+```ini
 NAME=ID
 ```
 
 Example:
 
-```sh
+```ini
 Josh=573922542252763931
 Alice=76492954235768945
 Bob=69348739475938475
