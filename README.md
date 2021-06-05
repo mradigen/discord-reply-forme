@@ -8,7 +8,7 @@ Using `shfire ` is against Discord's TOS. This script utilizes it. Use at your o
 
 ## Example
 
-
+![example](./example.png)
 
 ## Installation
 
@@ -19,7 +19,7 @@ cd discord-reply-forme
 
 ### Shfire
 
-Look on how to get your Auth key [here](https://github.com/ThatGeekyWeeb/shfire).
+Look on how to get your auth key [here](https://github.com/ThatGeekyWeeb/shfire).
 
 ## Usage
 
